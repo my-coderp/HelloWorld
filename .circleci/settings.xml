@@ -1,0 +1,18 @@
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                      http://maven.apache.org/xsd/settings-1.0.0.xsd">
+
+    <!-- setting up Maven to work with GitHub as the SCM. Links to the SCM section in the POM
+         This is running locally on this machine, so the pwd token remains on this PC to be used - i.e. relatively secure.
+         However when using the CI and having the CI doing the connection to GitHub we need to use a CircleCi Environment Parameters at project level
+          and taken the GITHUB infor from maven .m2 settings-->
+
+    <servers>
+        <server>
+            <id>github-helloworld</id>
+            <username>$(env.USERNAME_GITHUB}</username>
+            <password>${env.GITHUB_TOKEN}</password>
+        </server>
+    </servers>
+</settings>

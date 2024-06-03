@@ -1,0 +1,114 @@
+# Java Maven CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-java/ for more details
+#
+version: 2.1
+orbs:
+  codecov: codecov/codecov@3.2.3
+
+# Define the jobs we want to run for this project
+jobs:
+  # at the end of each job the docker image is stop. Using the cache command stores the
+  # dependency so it may be used in the next job
+  build:
+    docker:
+      # Primary container image where all steps run.
+      - image: cimg/openjdk:17.0.1
+        environment:
+          #customise the JVM maximum heap limit 3200m is max
+          MAVEN_OPTS: -Xmx800m
+        auth:
+          username: aufgeber
+          password: $DOCKER_PWD  # cthis env var must be set within the project
+
+        # Secondary DB container image on common network for testing
+
+      # Specify service dependencies here if necessary
+      # CircleCI maintains a library of pre-built images
+      # documented at https://circleci.com/docs/2.0/circleci-images/
+      # - image: circleci/postgres:9.4
+
+    working_directory: ~/repo
+
+
+
+    steps:
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "pom.xml" }}
+          # fallback to using the latest cache if no exact match is found
+          - v1-dependencies-
+
+      - run:
+          name: Download Maven dependencies and plugins to the local repository. Then use the repository by going offline
+          command: |
+            sudo chmod +x mvnw
+            ./mvnw -DskipTests clean install dependency:resolve-plugins dependency:go-offline
+            
+            # run maven wrapper if possible as doesn't require maven being installed on the target. Self sufficient
+            #- run: mvn test
+            # -o flag, puts Maven in “offline mode”. This means it will only use dependencies and plugins located in the local Maven repository.
+      - run:
+          name: using the wrapper as prefered over mvn statement to do the build and test
+          command: ./mvnw -o test
+
+      - save_cache:
+          paths:
+          - ~/.m2
+          key: v1-dependencies-{{ checksum "pom.xml" }}
+
+      # run tests! and gen code coverage
+      - run:
+          name: Run tests and collect coverage
+          command: mvn -B test
+
+      - codecov/upload
+
+  deploy:
+    # does circleci context work
+    # to deploy the container into github as a package need to copy setting.xml into circleci
+    # as settings go into github - need to make the github key an environment variable
+    # - run: mvn deploy -s .circleci/settings.xml
+    docker:
+      - image: cimg/openjdk:17.0.1
+        auth:
+          username: aufgeber
+          password: $DOCKER_PWD  # this env var must be set within the project
+
+    steps:
+      - checkout
+      - restore_cache:
+          key: v1-dependencies-{{ checksum "pom.xml" }}
+      # to deploy the container into github as a package need to copy setting.xml into circleci.
+      # as settings go into github - need to make the github key an environment variable
+      # note skipping tests as in this case this would mean bringing up the SQL DB again.
+
+      - run: echo $USERNAME_GITHUB
+      - run: echo .circleci/settings.xml
+
+      # no need for -o
+      - run:
+          name: deploy the jar file to github repository
+          command: |
+            sudo chmod +x mvnw
+            ./mvnw clean deploy -s .circleci/settings.xml -Dmaven.test.skip=true
+      - run: echo "this is the deployment job"
+
+
+# Orchestrate our job run sequence
+workflows:
+  version: 2
+
+  build-then-deploy:
+    jobs:
+      - build
+
+
+   #   - deploy:
+    #      context:
+    #        - org-global
+    #      requires:
+     #       - build

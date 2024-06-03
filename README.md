@@ -1,0 +1,1 @@
+Looking to provide a simple HelloWorld to Clone, but with omple CicleCI hooks
