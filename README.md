@@ -1,1 +1,1 @@
-Looking to provide a simple HelloWorld to Clone, but with omple CicleCI hooks
+Looking to provide a simple HelloWorld SQL project to Clone, but with simple CicleCI hooks
