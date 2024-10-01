@@ -19,7 +19,7 @@ import org.springframework.test.context.junit.jupiter.EnabledIf;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@EnabledIf(value = "#{environment.getActiveProfiles()[0] == 'dev'}", loadContext = true)
+@EnabledIf(value = "#{!environment.getActiveProfiles()[0] == 'production'}", loadContext = true)
 @DataJpaTest
 public class CategoryIT {
 
