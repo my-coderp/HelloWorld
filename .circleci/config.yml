@@ -12,6 +12,8 @@ jobs:
   # dependency so it may be used in the next job
   build:
     docker:
+
+
       # Primary container image where all steps run.
       - image: cimg/openjdk:17.0.1
         environment:
@@ -21,7 +23,18 @@ jobs:
           username: aufgeber
           password: $DOCKER_PWD  # cthis env var must be set within the project
 
-        # Secondary DB container image on common network for testing
+      # Secondary DB container image on common network for testing
+      - image: mysql:latest
+        environment:
+          MYSQL_DATABASE=mydatabase
+          MYSQL_PASSWORD=secret
+          MYSQL_ROOT_PASSWORD=verysecret
+          MYSQL_USER=myuser
+        ports:
+          3306:3306
+        auth:
+          username: aufgeber
+          password: $DOCKER_PWD  # cthis env var must be set within the project
 
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images

@@ -1,9 +1,6 @@
 package basic.com.domain;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 
 import lombok.*;
 import org.hibernate.Hibernate;
@@ -20,6 +17,7 @@ import java.util.Objects;
 @Setter
 @ToString
 @RequiredArgsConstructor
+@Table(name = "categories")
 public class Category {
 
     public Category() {
