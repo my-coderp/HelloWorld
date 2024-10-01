@@ -44,11 +44,15 @@ jobs:
       - checkout
 
       - run:
-          name: Install MySQL CLI; Import dummy data; run an example query
+          name: Install code and test
+          command: mvn clean install
+
+      - codecov/upload
+
+      - run:
+          name: Install MySQL CLI
           command: |
             sudo apt-get install default-mysql-client
-            mysql -h 127.0.0.1 -u app -pmySQLpwd db < sql-data/dummy.sql
-            mysql -h 127.0.0.1 -u app -pmySQLpwd --execute="SELECT * FROM db.Persons"
             
 
       - run:
@@ -67,13 +71,13 @@ jobs:
                                    command: dockerize -wait tcp://localhost:3306 -timeout 1m
 
 
-
-
       - run:
-          name: Install code and test
-          command: mvn clean install
+          name: Import dummy data; run an example query
+          command: |
+            mysql -h 127.0.0.1 -u app -pmySQLpwd db < sql-data/dummy.sql
+            mysql -h 127.0.0.1 -u app -pmySQLpwd --execute="SELECT * FROM test_version"
 
-      - codecov/upload
+      
 
       - run:
           name: Build service
