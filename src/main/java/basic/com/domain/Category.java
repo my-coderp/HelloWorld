@@ -22,6 +22,9 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class Category {
 
+    public Category() {
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
