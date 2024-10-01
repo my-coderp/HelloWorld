@@ -1,127 +1,117 @@
 # Java Maven CircleCI 2.0 configuration file
 #
-# Check https://circleci.com/docs/2.0/language-java/ for more details
+# Use the latest 2.1 version of CircleCI pipeline process engine.
+# See: https://circleci.com/docs/configuration-reference
 #
 version: 2.1
 orbs:
   codecov: codecov/codecov@3.2.3
 
-# Define the jobs we want to run for this project
+# Define a job to be invoked later in a workflow.
+# See: https://circleci.com/docs/jobs-steps/#jobs-overview & https://circleci.com/docs/configuration-reference/#jobs
 jobs:
   # at the end of each job the docker image is stop. Using the cache command stores the
   # dependency so it may be used in the next job
-  build:
+
+  # Below is the definition of your job to build and test your app, you can rename and customize it as you want.
+  build :
+    working_directory: ~/repo
     docker:
-
-
       # Primary container image where all steps run.
-      - image: cimg/openjdk:17.0.1
+      - image: maven:3.8.5-openjdk-17
         environment:
           #customise the JVM maximum heap limit 3200m is max
           MAVEN_OPTS: -Xmx800m
+          TEST_DATABASE_URL: mysql://mysql1@localhost/circle_test
+
         auth:
           username: aufgeber
           password: $DOCKER_PWD  # cthis env var must be set within the project
-
       # Secondary DB container image on common network for testing
       - image: mysql:latest
         environment:
-          MYSQL_DATABASE=mydatabase
-          MYSQL_PASSWORD=secret
-          MYSQL_ROOT_PASSWORD=verysecret
-          MYSQL_USER=myuser
+          MYSQL_DATABASE: db
+          MYSQL_PASSWORD: mySQLpwd
+          MYSQL_ROOT_PASSWORD: verysecret
+          MYSQL_USER: app
         ports:
           3306:3306
         auth:
           username: aufgeber
           password: $DOCKER_PWD  # cthis env var must be set within the project
 
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # - image: circleci/postgres:9.4
 
-    working_directory: ~/repo
-
-
-
+    executor:
     steps:
       - checkout
 
-      # Download and cache dependencies
-      - restore_cache:
-          keys:
-          - v1-dependencies-{{ checksum "pom.xml" }}
-          # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
-
       - run:
-          name: Download Maven dependencies and plugins to the local repository. Then use the repository by going offline
+          name: Install MySQL CLI; Import dummy data; run an example query
           command: |
-            sudo chmod +x mvnw
-            ./mvnw -DskipTests clean install dependency:resolve-plugins dependency:go-offline
+            sudo apt-get install default-mysql-client
+            mysql -h 127.0.0.1 -u app -pmySQLpwd db < sql-data/dummy.sql
+            mysql -h 127.0.0.1 -u app -pmySQLpwd --execute="SELECT * FROM db.Persons"
             
-            # run maven wrapper if possible as doesn't require maven being installed on the target. Self sufficient
-            #- run: mvn test
-            # -o flag, puts Maven in “offline mode”. This means it will only use dependencies and plugins located in the local Maven repository.
-      - run:
-          name: using the wrapper as prefered over mvn statement to do the build and test
-          command: ./mvnw -o test
 
-      - save_cache:
-          paths:
-          - ~/.m2
-          key: v1-dependencies-{{ checksum "pom.xml" }}
-
-      # run tests! and gen code coverage
       - run:
-          name: Run tests and collect coverage
-          command: mvn -B test
+                # Using multiple Docker containers for your jobs may cause race conditions
+                # if the service in a container does not start before the job tries to use it. use dockerize
+          name: install dockerize
+          command: |
+            wget 
+            https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-
+            amd64-$DOCKERIZE_VERSION.tar.gz && sudo tar -C /usr/local/bin -xzvf dockerize-linux-amd64-
+            $DOCKERIZE_VERSION.tar.gz && rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
+            environment:
+              DOCKERIZE_VERSION: v0.6.1
+                                   - run:
+                                   name: Wait for db
+                                   command: dockerize -wait tcp://localhost:3306 -timeout 1m
+
+
+
+
+      - run:
+          name: Install code and test
+          command: mvn clean install
 
       - codecov/upload
 
-  deploy:
-    # does circleci context work
-    # to deploy the container into github as a package need to copy setting.xml into circleci
-    # as settings go into github - need to make the github key an environment variable
-    # - run: mvn deploy -s .circleci/settings.xml
-    docker:
-      - image: cimg/openjdk:17.0.1
-        auth:
-          username: aufgeber
-          password: $DOCKER_PWD  # this env var must be set within the project
-
-    steps:
-      - checkout
-      - restore_cache:
-          key: v1-dependencies-{{ checksum "pom.xml" }}
-      # to deploy the container into github as a package need to copy setting.xml into circleci.
-      # as settings go into github - need to make the github key an environment variable
-      # note skipping tests as in this case this would mean bringing up the SQL DB again.
-
-      - run: echo $USERNAME_GITHUB
-      - run: echo .circleci/settings.xml
-
-      # no need for -o
       - run:
-          name: deploy the jar file to github repository
+          name: Build service
+          command: make
+
+  deploy:
+    executor:
+    steps:
+      - run:
+          name: Build image
           command: |
-            sudo chmod +x mvnw
-            ./mvnw clean deploy -s .circleci/settings.xml -Dmaven.test.skip=true
-      - run: echo "this is the deployment job"
+            docker build \
+              --tag my-app:latest \
+              --build-arg JAR_FILE=target/my-app.jar \
+
+      - run:
+          name: Login to GitHub Registry
+          command: |
+            echo "$GITHUB_PASSWORD" | docker login -u "$GITHUB_USERNAME" --password-stdin
+
+      - run:
+          name: Push Docker Image
+          command: |
+            docker tag my-image:latest my-registry/my-image:latest
+            docker push my-registry/my-image:latest
+
+
+
+
 
 
 # Orchestrate our job run sequence
 workflows:
-  version: 2
+  version: 1
 
-  build-then-deploy:
+  build:
     jobs:
       - build
 
-
-   #   - deploy:
-    #      context:
-    #        - org-global
-    #      requires:
-     #       - build
