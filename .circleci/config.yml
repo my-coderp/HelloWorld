@@ -40,8 +40,6 @@ jobs:
           username: aufgeber
           password: $DOCKER_PWD  # cthis env var must be set within the project
 
-
-
     steps:
       - checkout
 
