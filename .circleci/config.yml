@@ -41,7 +41,7 @@ jobs:
           password: $DOCKER_PWD  # cthis env var must be set within the project
 
 
-    executor:
+
     steps:
       - checkout
 
@@ -82,7 +82,7 @@ jobs:
           command: make
 
   deploy:
-    executor:
+
     steps:
       - run:
           name: Build image
@@ -109,7 +109,7 @@ jobs:
 
 # Orchestrate our job run sequence
 workflows:
-  version: 1
+  version: 2
 
   build:
     jobs:

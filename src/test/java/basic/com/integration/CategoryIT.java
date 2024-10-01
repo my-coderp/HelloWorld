@@ -12,12 +12,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.context.annotation.Profile;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.EnabledIf;
 
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 @EnabledIf(value = "#{!environment.getActiveProfiles()[0] == 'production'}", loadContext = true)
 @DataJpaTest
@@ -74,7 +73,7 @@ public class CategoryIT {
         } catch (Exception e) {
             System.out.println("object not found as was expected in this test " + e.getMessage());
         }
-        assertEquals(null, deletedDTO.getId());
+        assertNull(deletedDTO.getId());
     }
 
 
